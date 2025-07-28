@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orchestrated AI Solver</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+        
+        .main-content {
+            padding: 40px;
+        }
+        
+        .query-section {
+            margin-bottom: 30px;
+        }
+        
+        .query-section label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #2c3e50;
+            font-size: 1.1rem;
+        }
+        
+        .query-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e6ed;
+            border-radius: 8px;
+            font-size: 1rem;
+            resize: vertical;
+            min-height: 120px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .query-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .solve-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            font-weight: 600;
+        }
+        
+        .solve-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .solve-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .results {
+            display: none;
+            margin-top: 30px;
+        }
+        
+        .plan-section, .steps-section, .answer-section {
+            margin-bottom: 30px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: #667eea;
+            margin-right: 10px;
+            border-radius: 2px;
+        }
+        
+        .step {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .step-header {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .attempt {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 3px solid #28a745;
+        }
+        
+        .attempt.failed {
+            border-left-color: #dc3545;
+        }
+        
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        
+        .output {
+            background: #e8f5e8;
+            border: 1px solid #28a745;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 5px 0;
+            font-family: monospace;
+        }
+        
+        .feedback {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 5px 0;
+        }
+        
+        .final-answer {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #f5c6cb;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Orchestrated AI Solver</h1>
+            <p>Multi-agent structured reasoning for complex problems</p>
+        </div>
+        
+        <div class="main-content">
+            <div class="query-section">
+                <label for="query">Enter your complex problem:</label>
+                <textarea 
+                    id="query" 
+                    class="query-input" 
+                    placeholder="Example: Sarah has 5 apples. She gives 2 to John. Then, she doubles her remaining apples. If she buys 3 more, how many apples does she have now? If apples cost $0.50 each, what is the total value of her apples?"
+                ></textarea>
+                <br><br>
+                <button id="solve-btn" class="solve-btn">🚀 Solve Problem</button>
+            </div>
+            
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>AI agents are working on your problem...</p>
+            </div>
+            
+            <div id="error" class="error" style="display: none;"></div>
+            
+            <div id="results" class="results">
+                <div class="plan-section">
+                    <h2 class="section-title">📋 Problem Decomposition</h2>
+                    <div id="plan-content"></div>
+                </div>
+                
+                <div class="steps-section">
+                    <h2 class="section-title">⚙️ Step-by-Step Execution</h2>
+                    <div id="steps-content"></div>
+                </div>
+                
+                <div class="answer-section">
+                    <h2 class="section-title">✅ Final Answer</h2>
+                    <div id="answer-content" class="final-answer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const queryInput   = document.getElementById('query');
+        const solveBtn     = document.getElementById('solve-btn');
+        const loadingElm   = document.getElementById('loading');
+        const resultsElm   = document.getElementById('results');
+        const errorElm     = document.getElementById('error');
+        const planContent  = document.getElementById('plan-content');
+        const stepsContent = document.getElementById('steps-content');
+        const answerElm    = document.getElementById('answer-content');
+
+        solveBtn.addEventListener('click', () => startSolving());
+
+        queryInput.addEventListener('keydown', e => {
+            if (e.ctrlKey && e.key === 'Enter') startSolving();
+        });
+
+        async function startSolving() {
+            const query = queryInput.value.trim();
+            if (!query) {
+                alert('Please enter a problem to solve');
+                return;
+            }
+
+            // Reset UI
+            loadingElm.style.display  = 'block';
+            resultsElm.style.display  = 'none';
+            errorElm.style.display    = 'none';
+            planContent.innerHTML     = '';
+            stepsContent.innerHTML    = '';
+            answerElm.textContent     = '';
+            solveBtn.disabled         = true;
+
+            try {
+                // Prefer streaming endpoint
+                const resp = await fetch('/solve_stream', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+
+                const contentType = resp.headers.get('content-type') || '';
+                if (contentType.startsWith('text/event-stream')) {
+                    await consumeStream(resp.body);
+                } else {
+                    // Fallback to legacy JSON
+                    const data = await resp.json();
+                    if (!resp.ok) throw new Error(data.error || 'An error occurred');
+                    displayBatch(data);
+                }
+
+            } catch (err) {
+                errorElm.textContent = err.message;
+                errorElm.style.display = 'block';
+            } finally {
+                loadingElm.style.display = 'none';
+                solveBtn.disabled = false;
+            }
+        }
+
+        // -------- Streaming helpers --------
+        async function consumeStream(stream) {
+            const reader = stream.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+
+                let idx;
+                while ((idx = buffer.indexOf('\n\n')) !== -1) {
+                    const chunk = buffer.slice(0, idx).trim();
+                    buffer = buffer.slice(idx + 2);
+                    if (!chunk.startsWith('data:')) continue;
+
+                    const payloadRaw = chunk.slice(5).trim();
+                    if (payloadRaw === '[DONE]') {
+                        // Finished
+                        resultsElm.style.display = 'block';
+                        return;
+                    }
+                    const payload = JSON.parse(payloadRaw);
+                    processChunk(payload);
+                }
+            }
+        }
+
+        function processChunk(payload) {
+            switch (payload.type) {
+                case 'plan':
+                    renderPlan(payload.data);
+                    break;
+                case 'attempt':
+                    renderAttempt(payload.data);
+                    break;
+                case 'final_answer':
+                    answerElm.textContent = payload.data;
+                    break;
+                case 'error':
+                    errorElm.textContent = payload.data;
+                    errorElm.style.display = 'block';
+                    break;
+            }
+        }
+
+        // -------- Renderers --------
+        function renderPlan(planArr) {
+            planContent.innerHTML = planArr.map(step => `
+                <div class="step">
+                    <div class="step-header">Step ${step.step_num}: ${step.description}</div>
+                    <div>Type: <strong>${step.type}</strong></div>
+                </div>
+            `).join('');
+        }
+
+        function renderAttempt(data) {
+            let stepContainer = document.getElementById('step-' + data.step_num);
+            if (!stepContainer) {
+                stepContainer = document.createElement('div');
+                stepContainer.className = 'step';
+                stepContainer.id = 'step-' + data.step_num;
+                stepContainer.innerHTML = `
+                    <div class="step-header">Step ${data.step_num}: ${data.description} (${data.type})</div>
+                `;
+                stepsContent.appendChild(stepContainer);
+            }
+
+            const attemptDiv = document.createElement('div');
+            attemptDiv.className = 'attempt ' + (data.success ? '' : 'failed');
+            attemptDiv.innerHTML = `
+                <strong>Attempt ${data.attempt}:</strong>
+                <div class="code-block">${escapeHtml(data.code)}</div>
+                <div class="output"><strong>Output:</strong> ${escapeHtml(String(data.output))}</div>
+                <div class="feedback"><strong>Feedback:</strong> ${escapeHtml(data.feedback)}</div>
+            `;
+            stepContainer.appendChild(attemptDiv);
+            resultsElm.style.display = 'block';
+        }
+
+        // -------- Legacy batch renderer --------
+        function displayBatch(data) {
+            renderPlan(data.plan);
+            // Steps
+            stepsContent.innerHTML = data.steps.map(step => {
+                const attempts = step.attempts.map(at => `
+                    <div class="attempt ${at.success ? '' : 'failed'}">
+                        <strong>Attempt ${at.attempt}:</strong>
+                        <div class="code-block">${escapeHtml(at.code)}</div>
+                        <div class="output"><strong>Output:</strong> ${escapeHtml(String(at.output))}</div>
+                        <div class="feedback"><strong>Feedback:</strong> ${escapeHtml(at.feedback)}</div>
+                    </div>
+                `).join('');
+                return `
+                    <div class="step">
+                        <div class="step-header">Step ${step.step_num}: ${step.description} (${step.type})</div>
+                        ${attempts}
+                    </div>
+                `;
+            }).join('');
+            answerElm.textContent = data.final_answer;
+            resultsElm.style.display = 'block';
+        }
+
+        // -------- Utils --------
+        function escapeHtml(str) {
+            return str.replace(/[&<>"']/g, m => ({
+                '&':'&','<':'<','>':'>','"':'"',"'":'&#039;'
+            }[m]));
+        }
+    </script>
+</body>
+</html>
